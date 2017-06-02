@@ -10,7 +10,7 @@ N_D1 = file{1};
 N_D2 = file{2};
 force = file{3};
 
-id2 = fopen('../Visual Studio Debug Attempt/mbound.txt');
+id2 = fopen('../Standalone_test/mbound.txt');
 file2 = textscan(id2,'%f');
 N_mbound = file2{1};
 
