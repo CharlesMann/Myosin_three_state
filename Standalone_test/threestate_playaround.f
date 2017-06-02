@@ -255,7 +255,7 @@ c     ----------------------------------------------------
       write(14, *) kD2_D1
       write(16, *) kD2_A
       write(17, *) kA_D2
-      write(18, *) N_D1, N_D2, N_bound, hs_force
+      write(18, *) N_D1, N_D2, hs_force
       write(19, *) N_bound
       write(111, *) bin_pops
       time = time+timestep
