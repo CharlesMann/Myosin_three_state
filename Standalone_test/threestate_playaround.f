@@ -174,9 +174,8 @@ c     &(1+(k_thin_coop*(N_a_active/N_overlap)))*0.1
       ao2 = (N_overlap-N_a_active)/N_overlap
       ao3 = ao1*(1+ao2)
       a_off_rate = a_off*ao1*ao3
-	  
-c      write(99, *) N_a_active, N_bound
-	  
+  
+  
 c      a_off_rate = a_off*(N_a_active - N_a_bound)*(1+k_thin_coop*(((N_ov
 c     &erlap-N_a_active)/N_overlap)**p))
         
@@ -197,23 +196,20 @@ c     -------------------------------------------
 40    continue
                 M(43,43) = -1*(kD2_D1 + sum_of_rates)
      
-	  
+
 c     Runge Kutta for Updating number in each state
 c     ---------------------------------------------
       call RK2(M, time, timestep, x_cb0, x_cb)
       N_D1 = x_cb(42,1)
       N_D2 = x_cb(43,1)
       
-      
 c     Assign everything from RK appropriately
 c     ---------------------------------------
-      x_cb0 = x_cb
+      
       do 41 i = 1,41
       N_bound_sum = N_bound_sum + x_cb(i,1)
 41    continue 
       N_bound = N_bound_sum
-
-
 
 c     Interpolate
 c     -----------
@@ -221,7 +217,7 @@ c     -----------
          moved_bins(i) = bin_loc(i) - hslc*1e7*0.5
 51    continue
          
-      call pwl_interp_1d(41,bin_loc,x_cb0,41,moved_bins,
+      call pwl_interp_1d(41,bin_loc,x_cb,41,moved_bins,
      & x_cb_interp)
 
 c     Move detached heads back into D2
@@ -243,8 +239,13 @@ c     Must sum force from each bin
 50    continue
 
       do 52 i = 1,41
-      bin_pops(i) = x_cb0(i,1)
+      bin_pops(i) = x_cb_interp(i,1)
 52    continue
+      do 53 i = 1,41
+      x_cb0(i,1) = x_cb_interp(i,1)
+53    continue
+      x_cb0(42,1) = x_cb(42,1)
+      x_cb0(43,1) = x_cb(43,1)
 c     Write out to text file for plotting, increment time. Formatting is
 c     difficult because some rate functions are arrays whereas others
 c     are a single value. Using separate text files
@@ -282,7 +283,6 @@ c-------------------------------------------------------------------------------
          real*8 M(43,43), t, h, init_conds(43,1), yout(43,1)
          real*8 y_values(43,1), dyt(43,1), yt(43,1), dym(43,1),hh,h6,th
          real*8 dydt(43,1)
-         write(99,*) M
          y_values = init_conds
          hh = h*0.5
          h6 = h/6
@@ -428,11 +428,11 @@ c        (Step 3)
 c        (Step 4)
 
          call matrix_mult(M,43,43,yt,43,1,dyt)
-         write(99, *) dydt, dyt, dym
 
          do 85 i = 1,43
          yout(i,1) = y_values(i,1) + h6*(dydt(i,1)+dyt(i,1)+2*dym(i,1))
 85       continue
+         write(99, *) M
          return 
          
       end
