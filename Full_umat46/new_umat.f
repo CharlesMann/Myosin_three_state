@@ -4183,71 +4183,81 @@ c     -------------------------------------
 c     subroutine for the Runge Kutta method
 c     -------------------------------------
       subroutine RK(M, t, h, init_conds, yout)
-         real*8 M(43,43), t, h, init_conds(43), yout(43)
-         real*8 y_values(43), dyt(43), yt(43), dym(43), hh, h6, th
-         real*8 dydt(43)
+         real*8 M(43,43), t, h, init_conds(43,1), yout(43,1)
+         real*8 y_values(43,1), dyt(43,1), yt(43,1), dym(43,1), hh,h6,th
+         real*8 dydt(43,1)
          
          y_values = init_conds
          hh = h*0.5
          h6 = h/6
          th = t+hh
+
+c       Figure out how to code matrix multiplication
+c       This will be hard coded keeping in mind the nature of M
          
-c        M*y_values (Step 1)        
-         do 11 i = 1,42
-         dydt(i) = M(i,i)*y_values(i) + M(i,43)*y_values(43)
-11       continue
-         do 12 i = 1,43  
-         dydt(43) = dydt(43) + M(43,i)*y_values(i)
-12       continue
-       
-         do 13 i = 1,43
-         yt(i) = y_values(i) + hh*dydt(i)
-13       continue
+c        M*y_values (Step 1)    
+
+         call matrix_mult(M,43,43,y_values,43,1,dydt)
+
+         do 35 i = 1,43
+         yt(i,1) = y_values(i,1) + hh*dydt(i,1)
+35       continue        
 
 c        M*yt (Step 2)
-         do 14 i = 1,42
-         dyt(i) = M(i,i)*yt(i) + M(i,43)*yt(43)
-14       continue
-         do 15 i = 1,43
-         dyt(43) = dyt(43) + M(43,i)*yt(i)
-15       continue
+         call matrix_mult(M,43,43,yt,43,1,dyt)
 
-         do 16 i = 1,43
-         yt(i) = y_values(i) + hh*dyt(i)
-16       continue
+         do 65 i = 1,43
+         yt(i,1) = y_values(i,1) + hh*dyt(i,1)
+65       continue
 
 c        (Step 3)
-         do 17 i = 1,42
-         dym(i) = M(i,i)*yt(i) + M(i,43)*yt(43)
-17       continue
-         do 18 i = 1,43
-         dym(43) = dym(43) + M(43,i)*yt(i)
-18       continue
+         call matrix_mult(M,43,43,yt,43,1,dym)
          
-         do 19 i = 1,43
-         yt(i) = y_values(i) + h*dym(i)
-19       continue
+         do 75 i = 1,43
+         yt(i,1) = y_values(i,1) + h*dym(i,1)
+75       continue
 
-         do 21 i = 1,43
-         dym(i) = dym(i)+dyt(i)
-21       continue
+         do 33 i = 1,43
+         dym(i,1) = dym(i,1)+dyt(i,1)
+33       continue
 
 c        (Step 4)
-         do 22 i = 1,42
-         dyt(i) = M(i,i)*yt(i) + M(i,43)*yt(43)
-22       continue
-         do 23 i = 1,43
-         dyt(43) = dyt(43) + M(43,i)*yt(i)
-23       continue
-         
-         do 24 i = 1,43
-         yout(i) = y_values(i) + h6*(dydt(i) + dyt(i) + 2*dym(i))
-24       continue
- 
+
+         call matrix_mult(M,43,43,yt,43,1,dyt)
+         write(99, *) dydt, dyt, dym
+
+         do 85 i = 1,43
+         yout(i,1) = y_values(i,1) + h6*(dydt(i,1)+dyt(i,1)+2*dym(i,1))
+85       continue
          return 
          
       end
 
+c     ----------------------------------------------------------
+c     Matrix multiplication subroutine
+c     ----------------------------------------------------------
+      subroutine matrix_mult(A,m,n,B,p,q,C)
+      integer i,j,k,m,n,p,q,counter1,counter2
+      real*8 A(m,n), B(p,q), C(m,q)
+
+c     Initialize resultant matrix to zeros, else it populates strangely
+      do 400 counter1 = 1,m
+        do 401 counter2 = 1,q
+          C(counter1,counter2) = 0.0
+401     continue
+400   continue
+                
+      do 300 i = 1,m
+        do 301 j = 1,q
+          do 302 k = 1,n
+            C(i,j) = C(i,j) + A(i,q)*B(q,j)
+302       continue
+301     continue
+300   continue
+      
+      return
+      end
+      
 c     ----------------------------------------------------------
 c     subroutine for pwl_interp_1d: piecewise linear interpolant
 c     from umat45

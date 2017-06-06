@@ -200,7 +200,7 @@ c     -------------------------------------------
 	  
 c     Runge Kutta for Updating number in each state
 c     ---------------------------------------------
-      call RK(M, time, timestep, x_cb0, x_cb)
+      call RK2(M, time, timestep, x_cb0, x_cb)
       N_D1 = x_cb(42,1)
       N_D2 = x_cb(43,1)
       
@@ -282,7 +282,7 @@ c-------------------------------------------------------------------------------
          real*8 M(43,43), t, h, init_conds(43,1), yout(43,1)
          real*8 y_values(43,1), dyt(43,1), yt(43,1), dym(43,1),hh,h6,th
          real*8 dydt(43,1)
-      
+         write(99,*) M
          y_values = init_conds
          hh = h*0.5
          h6 = h/6
@@ -300,7 +300,7 @@ c        M*y_values (Step 1)
 25       continue
        
         
-
+         
 
          do 35 i = 1,43
          yt(i,1) = y_values(i,1) + hh*dydt(i,1)
@@ -317,7 +317,7 @@ c        M*yt (Step 2)
          do 65 i = 1,43
          yt(i,1) = y_values(i,1) + hh*dyt(i,1)
 65       continue
-         write(99, *) yt
+         
 c        (Step 3)
          do 31 i = 1,42
          dym(i,1) = M(i,i)*yt(i,1) + M(i,43)*yt(43,1)
@@ -341,7 +341,7 @@ c        (Step 4)
          do 37 i = 1,43
          dyt(43,1) = dyt(43,1) + M(43,i)*yt(i,1)
 37       continue
-         
+
          do 85 i = 1,43
          yout(i,1) = y_values(i,1) + h6*(dydt(i,1)+dyt(i,1)+2*dym(i,1))
 85       continue
@@ -386,7 +386,7 @@ c     --------------------------------------------
          real*8 M(43,43), t, h, init_conds(43,1), yout(43,1)
          real*8 y_values(43,1), dyt(43,1), yt(43,1), dym(43,1), hh,h6,th
          real*8 dydt(43,1)
-
+         
          y_values = init_conds
          hh = h*0.5
          h6 = h/6
@@ -428,7 +428,8 @@ c        (Step 3)
 c        (Step 4)
 
          call matrix_mult(M,43,43,yt,43,1,dyt)
-         
+         write(99, *) dydt, dyt, dym
+
          do 85 i = 1,43
          yout(i,1) = y_values(i,1) + h6*(dydt(i,1)+dyt(i,1)+2*dym(i,1))
 85       continue
@@ -440,13 +441,21 @@ c        (Step 4)
 
 c     Trying to implement my matrix algorithm subroutine
       subroutine matrix_mult(A,m,n,B,p,q,C)
-      integer i,j,k,m,n,p,q
-      real*8 A(m,n), B(p,q), C(m,p)
+      integer i,j,k,m,n,p,q,counter1,counter2
+      real*8 A(m,n), B(p,q), C(m,q)
 
-      i = 1
-      j = 1
-      k = 1
+c      i = 1
+c      j = 1
+c      k = 1
+      
 
+c     Initialize resultant matrix to zeros, else it populates weird
+      do 400 counter1 = 1,m
+        do 401 counter2 = 1,q
+          C(counter1,counter2) = 0.0
+401     continue
+400   continue
+                
       if (n.eq.p) then
         continue
       else
