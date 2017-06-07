@@ -30,9 +30,9 @@ legend({'Actin on', 'Actin off'});
 % Activated sites and Number bound
 % Need to add activated sites
 subplot(8,2,[5 6]);
-plot(time, N_mbound);
+plot(time, N_mbound, 'r');
 hold on;
-plot(time, N_a_active);
+plot(time, N_a_active, 'b');
 ylim([0 1]);
 legend({'N_mbound', 'Actin Active'});
 

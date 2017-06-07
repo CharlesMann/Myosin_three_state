@@ -20,7 +20,7 @@ c     redefine arrays as 43 x 1 matrices?
       real*8:: k_force = 1.12*10E-4, T=288, k_b = 1.381E-23, hsl =
      & 1130.0
       real*8:: l_thin = 1012.0, l_thick = 815.0, l_bare = 80.0, hslc
-      real*8:: time = 0.0, timestep = 0.001, t_act=0.1, hs_force = 0
+      real*8:: time = 0.0, timestep = 1E-4, t_act=0.1, hs_force = 0
       real*8:: k1 = 7.17, k3 = 13.1, k40 = 6.06, k41 =1.0,kD2_D1 = 100.0
       real*8:: k_cb = 0.002 , x_ps = 1.4, compliance = 0.5, cb_densit
      &y=6.9E16
@@ -116,36 +116,24 @@ c     reset this so it can be used again when updating DE matrix
       N_bound_sum = 0.0
       hs_force = 0.0
 
-c     Calculate Calcium (Just a twitch for now)
+c     Calculate Calcium in M (XZ used nM)
 c     -----------------------------------------
          
-c      if (time.ge.t_act) then
-c         t_p=t_act+0.01
-c         if (time.ge.t_p) then
-c           pCa=0.5*exp(-((time-t_p)*25)**2)
-c         else
-c           pCa=0
-c         endif
-c         Ca=(10**(-4.5))*sin(3.14*pCa)
-c         if (time.eq.0.2) then
-c            hslc = -50.0
-c         else
-c            hslc = 0.0
-c         endif
-c      else
-c         Ca = 0.1
-c      endif
+      if (time.ge.t_act) then
+         t_p=t_act+0.01
+         if (time.ge.t_p) then
+           pCa=0.5*exp(-((time-t_p)*25)**2)
+         else
+           pCa=(time-t_act)/.02
+         endif
+         Ca=(0.1 + (1000)*sin(3.14*pCa))*1E-9
+         
+      else
+         Ca = 0.1*1E-9
+      endif
 
-       if (time.ge.t_act) then
-           Ca = 10**(-4.5)
-       else
-           Ca = 0.0
-       endif
-c       if (time.eq.0.2) then
-c           hslc = -50.0
-c       else
-c           hslc = 0.0
-c       endif   
+
+ 
 
 c     Calculate N_overlap
 c     -------------------
