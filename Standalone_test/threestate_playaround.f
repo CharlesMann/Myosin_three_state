@@ -11,7 +11,7 @@ c     redefine arrays as 43 x 1 matrices?
       real*8 a1, a2, a3
       real*8 a_on_rate, a_off_rate, sum_of_rates, num_timesteps, t_p
       real*8 kd1, kd2, kd3, kd4, delta_D2
-      real*8 kA_D2(41), kD2_A(41), bin_loc(41), bin_pops(41),
+      real*8 kA_D2(41), kD2_A(41,1), bin_loc(41), bin_pops(41),
      &x_cb0(43,1), x_cb(43,1), moved_bins(41), x_cb_interp(41,1)
       real*8 M(43, 43)
       integer numsteps
@@ -54,7 +54,7 @@ c            kd4 = exp(kd3)
 c            kD2_A(i) = k3*kd4*(N_a_active-N_a_bound)
 
 c       Attempting to do it all in one step. Seems to work
-            kD2_A(i)=(k3)*exp((-1*k_cb*bin_loc(i)**2)/(2*k_b*T))
+            kD2_A(i,1)=(k3)*exp((-1*k_cb*bin_loc(i)**2)/(2*k_b*T))
      &*(N_a_active-N_bound)
 
 c           Attempting to set detachment as constant of same magnitude
@@ -73,12 +73,12 @@ c     --------------------
 21    continue
       do 20 i=1,41
             M(i,i) = -1*kA_D2(i)
-            M(i,43) = kD2_A(i)
+            M(i,43) = kD2_A(i,1)
             M(43,i) = kA_D2(i)
 20    continue
 c     Don't know if there is a sum function. Will sum all D2->A rates
       do 30 i=1,41
-            sum_of_rates = sum_of_rates + kD2_A(i)
+            sum_of_rates = sum_of_rates + kD2_A(i,1)
 30    continue
             
       M(42,42) = -1*kD1_D2
@@ -141,11 +141,11 @@ c      endif
        else
            Ca = 0.0
        endif
-       if (time.eq.0.2) then
-           hslc = -50.0
-       else
-           hslc = 0.0
-       endif   
+c       if (time.eq.0.2) then
+c           hslc = -50.0
+c       else
+c           hslc = 0.0
+c       endif   
 
 c     Calculate N_overlap
 c     -------------------
@@ -166,42 +166,41 @@ c     --------------------------------
       a3 = N_overlap - N_a_active
       a_on_rate = a_on*Ca*a3*a2
 
-c       Trying to calculate a_on_rate in one sweep
-c      a_on_rate = a_on*Ca*(N_overlap-N_a_active)*
-c     &(1+(k_thin_coop*(N_a_active/N_overlap)))*0.1
-      
+     
       ao1 = N_a_active - N_bound
       ao2 = (N_overlap-N_a_active)/N_overlap
       ao3 = ao1*(1+ao2)
       a_off_rate = a_off*ao1*ao3
-  
-  
-c      a_off_rate = a_off*(N_a_active - N_a_bound)*(1+k_thin_coop*(((N_ov
-c     &erlap-N_a_active)/N_overlap)**p))
-        
+ 
       N_a_active = N_a_active + (a_on_rate - a_off_rate)*timestep
 
 c     Update DE Matrix (including rate constants)
 c     -------------------------------------------
+
       do 40 i = 1,41
                 kd1 = -1*k_cb*bin_loc(i)*bin_loc(i)*1e-18
                 kd2 = (2*k_b*T)
                 kd3 = kd1/kd2
                 kd4 = exp(kd3)
-                kD2_A(i) = k3*kd4*(N_a_active-N_bound)   
-
-                sum_of_rates = sum_of_rates + kD2_A(i)
-                kD1_D2 = (k1 + H*k_mlcp)*(1.0+k_force*hs_force)
-                M(i,43) = kD2_A(i)
+                kD2_A(i,1) = k3*kd4*(N_a_active-N_bound)   
+                sum_of_rates = sum_of_rates + kD2_A(i,1)
 40    continue
-                M(43,43) = -1*(kD2_D1 + sum_of_rates)
-     
+
+      do 44 i = 1,41
+                M(i,43) = kD2_A(i,1)
+			    write(99, *) kD2_A(i,1), M(i,43)
+			    			
+44    continue
+      
+      kD1_D2 = (k1 + H*k_mlcp)*(1.0+k_force*hs_force)
+      M(43,43) = -1*(kD2_D1 + sum_of_rates)
 
 c     Runge Kutta for Updating number in each state
 c     ---------------------------------------------
-      call RK2(M, time, timestep, x_cb0, x_cb)
+      call RK(M, time, timestep, x_cb0, x_cb)
       N_D1 = x_cb(42,1)
       N_D2 = x_cb(43,1)
+      write(99, *) x_cb
       
 c     Assign everything from RK appropriately
 c     ---------------------------------------
@@ -432,7 +431,7 @@ c        (Step 4)
          do 85 i = 1,43
          yout(i,1) = y_values(i,1) + h6*(dydt(i,1)+dyt(i,1)+2*dym(i,1))
 85       continue
-         write(99, *) M
+         
          return 
          
       end
@@ -443,11 +442,6 @@ c     Trying to implement my matrix algorithm subroutine
       subroutine matrix_mult(A,m,n,B,p,q,C)
       integer i,j,k,m,n,p,q,counter1,counter2
       real*8 A(m,n), B(p,q), C(m,q)
-
-c      i = 1
-c      j = 1
-c      k = 1
-      
 
 c     Initialize resultant matrix to zeros, else it populates weird
       do 400 counter1 = 1,m
