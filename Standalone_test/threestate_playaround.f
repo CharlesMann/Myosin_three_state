@@ -196,7 +196,7 @@ c     -------------------------------------------
       
 c     Runge Kutta for Updating number in each state
 c     ---------------------------------------------
-      call RK(M, time, timestep, x_cb0, x_cb)
+      call RK2(M, time, timestep, x_cb0, x_cb)
       N_D1 = x_cb(42,1)
       N_D2 = x_cb(43,1)
       
