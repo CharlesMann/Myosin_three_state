@@ -4232,6 +4232,10 @@ c        (Step 3)
 33       continue
 
 c        (Step 4)
+c        Reset dyt to zero
+         do 39 i = 1,43
+		    dyt(i,1) = 0.0
+39       continue
          do 36 i = 1,42
          dyt(i,1) = M(i,i)*yt(i,1) + M(i,43)*yt(43,1)
 36       continue
