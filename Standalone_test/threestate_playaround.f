@@ -196,7 +196,7 @@ c     -------------------------------------------
       
 c     Runge Kutta for Updating number in each state
 c     ---------------------------------------------
-      call RK2(M, time, timestep, x_cb0, x_cb)
+      call RK(M, time, timestep, x_cb0, x_cb)
       N_D1 = x_cb(42,1)
       N_D2 = x_cb(43,1)
       
@@ -427,7 +427,10 @@ c        (Step 3)
 33       continue
 
 c        (Step 4)
-
+c        Trying to reset dyt to zero in this RK as well
+         do 38 i = 1,43
+		    dyt(i,1) = 0.0
+38       continue
          call matrix_mult(M,43,43,yt,43,1,dyt)
 
          do 85 i = 1,43

@@ -1,40 +1,44 @@
-Material Constants:				Shows up:
+﻿Material Constants:				Shows up:
 ------------------                           ——————————	
 cm(1) = ta							
+
 cm(2) = b2
 cm(3) = b3
 cm(4) = b4
-cm(5) = lo              x			x
-cm(6) = lr              x			x
+cm(5) = lo              			
+cm(6) = lr              			
 cm(7) = k_mlcp 
 cm(8) = k_force
-cm(9) = T_k             x			x
-cm(10) = k_b            x			x
-cm(11) = l_thin         x			x	
-cm(12) = l_thick        x			x
-cm(13) = l_bare         x			x
-cm(14) = t_act					x
+cm(9) = T_k             			
+cm(10) = k_b            			
+cm(11) = l_thin         				
+cm(12) = l_thick        			
+cm(13) = l_bare         			
+cm(14) = t_act					
 cm(15) = k1
 cm(16) = k3
 cm(17) = k40
 cm(18) = k41
-cm(19) = a_on					x
-cm(20) = a_off					x
+cm(19) = a_on					
+cm(20) = a_off					
 cm(21) = kD2_D1
-cm(22) = k_cb (K in .k) x			x
-cm(23) = x_ps           x			x
-cm(24) = compliance (Cp in .k)			x
-cm(25) = cb_density     x			x
+cm(22) = k_cb (K in .k) 			
+cm(23) = x_ps           			
+cm(24) = compliance (Cp in .k)			
+cm(25) = cb_density     			
 cm(26) = k_thin_coop (k_coop in .k)
-cm(27) = bp             x			x
-cm(28) = s_2					x
-cm(29) = s_3					x
-cm(30) = fCa            x			x
+cm(27) = bp             			
+cm(28) = s_2					
+cm(29) = s_3					
+cm(30) = fCa            			
 cm(31) = fCa_2
-cm(32) = l_falloff				x
+
+cm(32) = l_falloff				
+
+
 
 Shows up, not needed or unknown:
-————————————————
+
 C,Bf,Bt,Bfs,P4(G),Cka,f_p2,kd1,kdb1,kd2,kdb2,kplus,kminus,Cka_2			
 
 

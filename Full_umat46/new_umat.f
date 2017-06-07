@@ -2713,6 +2713,7 @@ c
       F7=hsv(39)
       F2=hsv(40)
       F5=hsv(41)
+      F5=hsv(41)
       F8=hsv(42)
       F3=hsv(43)
       F6=hsv(44)
@@ -3411,7 +3412,7 @@ c$$$      end
 c    Commented out umat46, replacing with three-state code
 
 
-c    subroutine umat46?
+c    subroutine umat46
       subroutine umat46 (cm,eps,sig,epsp,hsv,dt1,capa,
      . etype,time,temp,failel,crv,xM,xS,xN,vrat,Eb1).
 c*******************************************************************
@@ -3462,6 +3463,7 @@ c     and in the D1 and D2 states (1-41 are bins, 42 and 43 are D1
 c     D2 respectively). x_cb0 are initial for RK method, 
 c     which returns the updated populations in x_cb
       real*8 x_cb0(43), x_cb(43), x_cb_interp(41)
+      real*8 a1, a2, a3, ao1, ao2, ao3
   
 c     M is the matrix that contains the rates to calculate dy/dt, where 
 c     y is the array of populations. Ca is calcium concentration, T_a1
@@ -3485,7 +3487,7 @@ c     active material parameters and bulk modulus (20)
       lo=cm(5)
       lr=cm(6)
   
-c     The following are to be set in the instruction file as material constants?
+c     The following are to be set in the instruction file as material constants
       k_mlcp = cm(7)
       k_force = cm(8)
 c     Experimental Temp
@@ -3515,7 +3517,7 @@ c     How much of filament movement is transferred to cross-bridges
 c     density of cross-bridges in a half sarcomere
       cb_density = cm(25)
 c     Cooperative activation of binding sites
-      k_thin_coop = cm(26)
+      k_coop = cm(26)
   
 c     Other cm's from XZ code
 c     bulk modulus
@@ -3530,9 +3532,7 @@ c     factor scaling calcium transient
       fCa_2=cm(31)
       l_falloff = cm(32)
   
-c     hsv stuff will go here, initialize things
-c    ------------------------------------------
-c     deformation gradient from hsv 13 to 21
+
 c     IHYPER=1, F=R'*F, in global frames
 c
       F1=hsv(60)
@@ -3810,13 +3810,13 @@ c     make active force zero when reaching l0 Sep, 2016 by XZ
 c      Calculate Calcium
 c      -----------------
 c      This is using XZ's modified calcium curve. Check units. Ca in nM
-       t_p=t_act+0.01
+       t_p=cm(14)+0.01
        if (time.ge.t_p) then
 c      cm(33) and cm(34) are set by XZ. Need more information on this
          pCa=0.5*exp(-((time-t_p)*cm(33))**cm(34))
        else
 c      time is greater than t_act, but not to t_p               
-         pCa=(time-t_act)/0.02
+         pCa=(time-cm(14))/0.02
        endif
        Ca=0.1+1000*sin(3.14*pCa)
       
@@ -3829,8 +3829,8 @@ c      -------------------
                N_overlap=0.0
             endif
          else
-       x_overlap = l_thick + l_thin -hsl
-       x_maxoverlap = l_thick - l_bare
+       x_overlap = cm(12) + cm(11) -hsl
+       x_maxoverlap = cm(12) - cm(13)
        if (x_overlap.le.0.0) then
                N_overlap = 0.0
        elseif (x_overlap.ge.0.0 .AND. x_overlap.le. x_maxoverlap) then
@@ -3841,24 +3841,28 @@ c      -------------------
       
 c      Calculate the number of activated actin
 c      ---------------------------------------
-       a_on_rate = a_on*Ca*(N_overlap-N_a_active0)*
-     & (1+(k_thin_coop*(N_a_active0/N_overlap)))
+      a1 = (N_a_active/N_overlap)
+      a2 = 1 + (cm(26)*a1)
+      a3 = N_overlap - N_a_active
+      a_on_rate = cm(19)*Ca*a3*a2       
       
-       a_off_rate = a_off*(N_a_active0 - N_bound0)*(1+k_thin_coop*(((N
-     & _overlap-N_a_active0)/N_overlap)**p))
+      ao1 = N_a_active - N_bound
+      ao2 = (N_overlap-N_a_active)/N_overlap
+      ao3 = ao1*(1+cm(26)*ao2)
+      a_off_rate = cm(20)*ao3
         
-       N_a_active = N_a_active0 + (a_on_rate - a_off_rate)*dt1
+      N_a_active = N_a_active0 + (a_on_rate - a_off_rate)*dt1
 
 c      Calculate Rate Constants kA_D2, kD2_A
 c      For now, constant detachment rate
 c      -------------------------------------
        do 10 i = 1,41
           bin_position(i) = ((i+1)*0.5-11)  
-          kD2_A(i) = k3*exp((-1*k_cb*bin_position(i)**2)/(2*k_b*T))
+          kD2_A(i) = cm(16)*exp((-1*cm(22)*bin_position(i)**2)/(2*cm(10)*cm(9)))
      & *(N_a_active-N_bound0)
           kA_D2(i) = 10
 10     continue
-       kD1_D2 = (k1+H*k_mlcp)*(1+k_force*T_a10)
+       kD1_D2 = (cm(15)+H*cm(7))*(1+cm(8)*T_a10)
 
 c     Create M matrix to be used in the Runge-Kutta Method
 c     ----------------------------------------------------
@@ -3874,8 +3878,8 @@ c     ----------------------------------------------------
           M(43,i) = kA_D2(i)
 30     continue
        M(42,42) = -1*kD1_D2
-       M(43,43) = -1*(kD2_D1 + sum_of_rates)
-       M(42,43) = kD2_D1
+       M(43,43) = -1*(cm(21) + sum_of_rates)
+       M(42,43) = cm(21)
        M(43,42) = kD1_D2
 
 c      Runge Kutta for updating the number in each state/bin
@@ -3891,9 +3895,9 @@ c      -----------------------------------------------------
 
 c      Interpolate the cross-bridges (same as XZ code)
 c      -----------------------------------------------
-c      hsv(13) is the change in hsl, cm(13) is compliance factor
+c      hsv(13) is the change in hsl, cm(24) is compliance factor
        do 60 i = 1,41
-          moved_bins(i) = bin_position(i) - hsv(13)*1e7*cm(13)
+          moved_bins(i) = bin_position(i) - hsv(13)*1e7*cm(24)
 60     continue
 
        call pwl_interp_1d(41,bin_position,x_cb,41,moved_bins,x_cb_interp
@@ -3909,8 +3913,8 @@ c      -------------------------------------
 c      Calculate the half-sarc force
 c      -----------------------------
        do 50 i = 1,41
-          T_a1 = T_a1+cb_density*k_cb*x_cb_interp(i)*(bin_po
-     & sition(i)+x_ps)
+          T_a1 = T_a1+cm(25)*cm(22)*x_cb_interp(i)*(bin_po
+     & sition(i)+cm(23))
 50     continue
        
 c      Save everything in the history variables for the next step
