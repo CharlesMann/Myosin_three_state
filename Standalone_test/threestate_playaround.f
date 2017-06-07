@@ -170,7 +170,7 @@ c     --------------------------------
       ao1 = N_a_active - N_bound
       ao2 = (N_overlap-N_a_active)/N_overlap
       ao3 = ao1*(1+ao2)
-      a_off_rate = a_off*ao1*ao3
+      a_off_rate = a_off*ao3
  
       N_a_active = N_a_active + (a_on_rate - a_off_rate)*timestep
 
@@ -187,20 +187,19 @@ c     -------------------------------------------
 40    continue
 
       do 44 i = 1,41
-                M(i,43) = kD2_A(i,1)
-			    write(99, *) kD2_A(i,1), M(i,43)
+         M(i,43) = kD2_A(i,1)
 			    			
 44    continue
       
       kD1_D2 = (k1 + H*k_mlcp)*(1.0+k_force*hs_force)
       M(43,43) = -1*(kD2_D1 + sum_of_rates)
-
+      
 c     Runge Kutta for Updating number in each state
 c     ---------------------------------------------
       call RK(M, time, timestep, x_cb0, x_cb)
       N_D1 = x_cb(42,1)
       N_D2 = x_cb(43,1)
-      write(99, *) x_cb
+      
       
 c     Assign everything from RK appropriately
 c     ---------------------------------------
@@ -297,13 +296,11 @@ c        M*y_values (Step 1)
          do 25 i = 1,43  
          dydt(43,1) = dydt(43,1) + M(43,i)*y_values(i,1)
 25       continue
-       
-        
-         
 
          do 35 i = 1,43
          yt(i,1) = y_values(i,1) + hh*dydt(i,1)
 35       continue
+         
         
 c        M*yt (Step 2)
          do 45 i = 1,42
@@ -312,7 +309,7 @@ c        M*yt (Step 2)
          do 55 i = 1,43
          dyt(43,1) = dyt(43,1) + M(43,i)*yt(i,1)
 55       continue
-
+         
          do 65 i = 1,43
          yt(i,1) = y_values(i,1) + hh*dyt(i,1)
 65       continue
@@ -324,22 +321,27 @@ c        (Step 3)
          do 32 i = 1,43
          dym(43,1) = dym(43,1) + M(43,i)*yt(i,1)
 32       continue
-         
+                  
          do 75 i = 1,43
          yt(i,1) = y_values(i,1) + h*dym(i,1)
 75       continue
-
+         
          do 33 i = 1,43
          dym(i,1) = dym(i,1)+dyt(i,1)
 33       continue
-
+         
 c        (Step 4)
+c        Reset dyt to zero
+         do 39 i = 1,43
+           dyt(i,1) = 0.0
+39       continue
          do 36 i = 1,42
          dyt(i,1) = M(i,i)*yt(i,1) + M(i,43)*yt(43,1)
 36       continue
          do 37 i = 1,43
          dyt(43,1) = dyt(43,1) + M(43,i)*yt(i,1)
 37       continue
+         
 
          do 85 i = 1,43
          yout(i,1) = y_values(i,1) + h6*(dydt(i,1)+dyt(i,1)+2*dym(i,1))

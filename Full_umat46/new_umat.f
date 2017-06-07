@@ -4184,34 +4184,44 @@ c     subroutine for the Runge Kutta method
 c     -------------------------------------
       subroutine RK(M, t, h, init_conds, yout)
          real*8 M(43,43), t, h, init_conds(43,1), yout(43,1)
-         real*8 y_values(43,1), dyt(43,1), yt(43,1), dym(43,1), hh,h6,th
+         real*8 y_values(43,1), dyt(43,1), yt(43,1), dym(43,1),hh,h6,th
          real*8 dydt(43,1)
-         
          y_values = init_conds
          hh = h*0.5
          h6 = h/6
          th = t+hh
-
-c       Figure out how to code matrix multiplication
-c       This will be hard coded keeping in mind the nature of M
          
-c        M*y_values (Step 1)    
-
-         call matrix_mult(M,43,43,y_values,43,1,dydt)
-
+c        M*y_values (Step 1)        
+         do 15 i = 1,42
+         dydt(i,1) = M(i,i)*y_values(i,1) + M(i,43)*y_values(43,1)
+15       continue
+         do 25 i = 1,43  
+         dydt(43,1) = dydt(43,1) + M(43,i)*y_values(i,1)
+25       continue
+       
          do 35 i = 1,43
          yt(i,1) = y_values(i,1) + hh*dydt(i,1)
-35       continue        
-
+35       continue
+        
 c        M*yt (Step 2)
-         call matrix_mult(M,43,43,yt,43,1,dyt)
+         do 45 i = 1,42
+         dyt(i,1) = M(i,i)*yt(i,1) + M(i,43)*yt(43,1)
+45       continue
+         do 55 i = 1,43
+         dyt(43,1) = dyt(43,1) + M(43,i)*yt(i,1)
+55       continue
 
          do 65 i = 1,43
          yt(i,1) = y_values(i,1) + hh*dyt(i,1)
 65       continue
-
+         
 c        (Step 3)
-         call matrix_mult(M,43,43,yt,43,1,dym)
+         do 31 i = 1,42
+         dym(i,1) = M(i,i)*yt(i,1) + M(i,43)*yt(43,1)
+31       continue
+         do 32 i = 1,43
+         dym(43,1) = dym(43,1) + M(43,i)*yt(i,1)
+32       continue
          
          do 75 i = 1,43
          yt(i,1) = y_values(i,1) + h*dym(i,1)
@@ -4222,17 +4232,20 @@ c        (Step 3)
 33       continue
 
 c        (Step 4)
-
-         call matrix_mult(M,43,43,yt,43,1,dyt)
-         write(99, *) dydt, dyt, dym
+         do 36 i = 1,42
+         dyt(i,1) = M(i,i)*yt(i,1) + M(i,43)*yt(43,1)
+36       continue
+         do 37 i = 1,43
+         dyt(43,1) = dyt(43,1) + M(43,i)*yt(i,1)
+37       continue
 
          do 85 i = 1,43
          yout(i,1) = y_values(i,1) + h6*(dydt(i,1)+dyt(i,1)+2*dym(i,1))
 85       continue
+
          return 
          
       end
-
 c     ----------------------------------------------------------
 c     Matrix multiplication subroutine
 c     ----------------------------------------------------------
