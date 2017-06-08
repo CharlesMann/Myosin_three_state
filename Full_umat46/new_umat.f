@@ -3447,11 +3447,12 @@ c     terms for N_overlap
       real x_overlap, x_maxoverlap, N_overlap
   
 c     terms for the number in states D1 and D2, as well as N_bound
-c     N_a_active is the number of actin active at any given step. 
-      real N_D1, N_D2, N_bound, N_a_active, N_bound0, N_a_active0
+c     N_on is the number of actin active at any given step. 
+      real N_D1, N_D2, N_bound, N_on, N_bound0, N_on0
 
 c     terms for rates
-      real a_on_rate, a_off_rate, sum_of_rates
+      real*8 a_on_rate, a_off_rate, sum_of_rates, N_bound_sum
+      real*8 kd1, kd2, kd3, kd4
   
 c     arrays to hold the activation and de-activation rates.
 c     kA_D2 is detachment, kD2_A is attachment.
@@ -3624,7 +3625,7 @@ c             interpolation -> hsv
 c       hsv(57) is N_bound, initialized to zero
         hsv(57) = 0.0
 
-c       hsv(58) is N_a_active, initialized to zero
+c       hsv(58) is N_on, initialized to zero
         hsv(58) = 0.0
 
         hsv(10) = 0.0
@@ -3791,13 +3792,12 @@ c     initialization: reset x_cb0 from previous timestep
         x_cb0(43) = hsv(56)
 
         N_bound0 = hsv(57)
-        N_a_active0 = hsv(58)
+        N_on0 = hsv(58)
 
 c     Need the force from last time step to calculate rate of D1 -> D2        
         T_a10 = hsv(10)
-
-
-c     Once the header is generated, use cm(") instead of for ex. k3 or T
+        delta_D2 = 0.0
+        sum_of_rates = 0.0
 
       if (time.ge.t_act) then
 
@@ -3809,7 +3809,7 @@ c     make active force zero when reaching l0 Sep, 2016 by XZ
 
 c      Calculate Calcium
 c      -----------------
-c      This is using XZ's modified calcium curve. Check units. Ca in nM
+c      This is using XZ's modified calcium curve. Check units. Ca in M
        t_p=cm(14)+0.01
        if (time.ge.t_p) then
 c      cm(33) and cm(34) are set by XZ. Need more information on this
@@ -3818,18 +3818,18 @@ c      cm(33) and cm(34) are set by XZ. Need more information on this
 c      time is greater than t_act, but not to t_p               
          pCa=(time-cm(14))/0.02
        endif
-       Ca=0.1+1000*sin(3.14*pCa)
+       Ca= (0.1+1000*sin(3.14*pCa))*1E-9
       
 c      Calculate N_overlap
 c      -------------------
        hsl=0.5*hsv(12)
        if (hsl.le.cm(11)) then 
-            N_overlap=1-cm(32)*(cm(11)-hsl)
+            N_overlap=1-cm(32)*(cm(11)- 0.5*hsv(12))
             if (N_overlap.lt.0) then
                N_overlap=0.0
             endif
          else
-       x_overlap = cm(12) + cm(11) -hsl
+       x_overlap = cm(12) + cm(11) - 0.5*hsv(12)
        x_maxoverlap = cm(12) - cm(13)
        if (x_overlap.le.0.0) then
                N_overlap = 0.0
@@ -3841,26 +3841,31 @@ c      -------------------
       
 c      Calculate the number of activated actin
 c      ---------------------------------------
-      a1 = (N_a_active/N_overlap)
+      a1 = (N_on0/N_overlap)**p
       a2 = 1 + (cm(26)*a1)
-      a3 = N_overlap - N_a_active
+      a3 = N_overlap - N_on0
       a_on_rate = cm(19)*Ca*a3*a2       
       
-      ao1 = N_a_active - N_bound
-      ao2 = (N_overlap-N_a_active)/N_overlap
+      ao1 = N_on0 - N_bound
+      ao2 = (N_overlap-N_on0)/N_overlap
       ao3 = ao1*(1+cm(26)*ao2)
       a_off_rate = cm(20)*ao3
         
-      N_a_active = N_a_active0 + (a_on_rate - a_off_rate)*dt1
+      N_on = N_on0 + (a_on_rate - a_off_rate)*dt1
 
 c      Calculate Rate Constants kA_D2, kD2_A
 c      For now, constant detachment rate
 c      -------------------------------------
        do 10 i = 1,41
-          bin_position(i) = ((i+1)*0.5-11)  
-          kD2_A(i) = cm(16)*exp((-1*cm(22)*bin_position(i)**2)/(2*cm(10)*cm(9)))
-     & *(N_a_active-N_bound0)
+          bin_position(i) = ((i+1)*0.5-11)
+          kd1 = -1*k_cb*bin_loc(i)*bin_loc(i)*1e-18
+          kd2 = (2*k_b*T)
+          kd3 = kd1/kd2
+          kd4 = exp(kd3)		  
+          kD2_A(i) = k3*kd4*(N_on-N_bound0)
           kA_D2(i) = 10
+	      sum_of_rates = sum_of_rates + kD2_A(i)
+		   
 10     continue
        kD1_D2 = (cm(15)+H*cm(7))*(1+cm(8)*T_a10)
 
@@ -3889,9 +3894,9 @@ c      -----------------------------------------------------
        N_D2 = yout(43)
        
        do 40 i = 1,41
-       N_bound = N_bound + x_cb(i)
+       N_bound_sum = N_bound_sum + x_cb(i)
 40     continue
-
+       N_bound = N_bound_sum
 
 c      Interpolate the cross-bridges (same as XZ code)
 c      -----------------------------------------------
@@ -3909,6 +3914,7 @@ c      -------------------------------------
           delta_D2 = delta_D2 + (x_cb(i) - x_cb_interp(i))
 61     continue
        x_cb(43) = x_cb(43) + delta_D2
+       N_bound = N_bound - delta_D2
 
 c      Calculate the half-sarc force
 c      -----------------------------
@@ -3917,15 +3923,15 @@ c      -----------------------------
      & sition(i)+cm(23))
 50     continue
        
-c      Save everything in the history variables for the next step
-c      ---------------------------------------------------------
+c      This else goes with 
+c      "make active force zero when reaching l0 Sep, 2016 by XZ"
        else
         T_a1=0.0
        endif
        
       else
 c     Prior to activation, low calcium and no force
-       Ca=0.1
+       Ca=0.1*1E-9
        T_a1=0.0
       endif
 
@@ -4170,7 +4176,7 @@ c     These need to be x_cb_interp? And after interpolation, update D2?
        hsv(56) = x_cb(43)
 
        hsv(57) = N_bound
-       hsv(58) = N_a_active
+       hsv(58) = N_on
 
 c     Including hsv(59) = Ca to keep record of it through time?
       hsv(59) = Ca
@@ -4254,31 +4260,7 @@ c        Reset dyt to zero
          return 
          
       end
-c     ----------------------------------------------------------
-c     Matrix multiplication subroutine
-c     ----------------------------------------------------------
-      subroutine matrix_mult(A,m,n,B,p,q,C)
-      integer i,j,k,m,n,p,q,counter1,counter2
-      real*8 A(m,n), B(p,q), C(m,q)
-
-c     Initialize resultant matrix to zeros, else it populates strangely
-      do 400 counter1 = 1,m
-        do 401 counter2 = 1,q
-          C(counter1,counter2) = 0.0
-401     continue
-400   continue
-                
-      do 300 i = 1,m
-        do 301 j = 1,q
-          do 302 k = 1,n
-            C(i,j) = C(i,j) + A(i,q)*B(q,j)
-302       continue
-301     continue
-300   continue
-      
-      return
-      end
-      
+     
 c     ----------------------------------------------------------
 c     subroutine for pwl_interp_1d: piecewise linear interpolant
 c     from umat45

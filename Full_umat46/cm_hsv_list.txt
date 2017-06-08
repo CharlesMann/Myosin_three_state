@@ -61,7 +61,7 @@ hsv(14)-hsv(54) are the 41 bins along the half-sarcomere
 hsv(55) is the population in D1
 hsv(56) is the population in D2
 hsv(57) = N_bound
-hsv(58) = N_a_active
+hsv(58) = N_on
 hsv(59) = Ca
 
 
